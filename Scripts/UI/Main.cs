@@ -13,11 +13,12 @@ public partial class Main : Control
         var config = GameConfigLoader.FromJson(configJson);
         _engine = new GameEngine(config, new SeededRandom(1));
 
-        var hud = GetNode<HudPanel>("HudPanel");
-        hud.Attach(_engine);
+        GetNode<HudPanel>("HudPanel").Attach(_engine);
+        GetNode<PlayerPanelList>("PlayerPanelList").Attach(_engine);
+        GetNode<SetupOverlay>("SetupOverlay").Attach(_engine);
+        GetNode<TicketChoiceOverlay>("TicketChoiceOverlay").Attach(_engine);
 
-        _engine.StartNewGame();
-        GD.Print($"TrainGame ready. Game started: {_engine.State.Started}");
+        GD.Print("TrainGame ready. Awaiting player count selection.");
     }
 
     private static string LoadConfigJson()

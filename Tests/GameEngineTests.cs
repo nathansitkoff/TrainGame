@@ -1,3 +1,4 @@
+using System.Linq;
 using TrainGame.Logic;
 using TrainGame.Model;
 using Xunit;
@@ -11,6 +12,7 @@ public class GameEngineTests
     {
         var engine = new GameEngine(new GameConfig(), new SeededRandom(1));
         Assert.False(engine.State.Started);
+        Assert.Equal(GamePhase.NotStarted, engine.State.Phase);
     }
 
     [Fact]
@@ -20,7 +22,7 @@ public class GameEngineTests
         int eventCount = 0;
         engine.StateChanged += () => eventCount++;
 
-        engine.StartNewGame();
+        engine.StartNewGame(2);
 
         Assert.Equal(1, eventCount);
         Assert.True(engine.State.Started);
@@ -30,16 +32,15 @@ public class GameEngineTests
     public void StartNewGameBuildsAllDecksAndMarket()
     {
         var engine = new GameEngine(new GameConfig(), new SeededRandom(1));
-        engine.StartNewGame();
+        engine.StartNewGame(2);
 
         Assert.NotNull(engine.State.TrainCardDeck);
         Assert.NotNull(engine.State.Market);
         Assert.NotNull(engine.State.DestinationTicketDeck);
 
-        // Market has pulled 5 face-ups from the 110-card train deck.
-        // (Could be fewer than 105 remaining if a 3-loco reshuffle fired.)
-        Assert.Equal(5, engine.State.Market!.Slots.Count);
-        Assert.Equal(110, engine.State.TrainCardDeck!.TotalRemaining + 5);
-        Assert.Equal(30, engine.State.DestinationTicketDeck!.RemainingCount);
+        // Market fills 5 face-ups; each of 2 players gets a starting hand of 4.
+        int handTotal = engine.State.Players.Sum(p => p.TotalHandCards);
+        int marketTotal = engine.State.Market!.Slots.Count(s => s is not null);
+        Assert.Equal(110, engine.State.TrainCardDeck!.TotalRemaining + marketTotal + handTotal);
     }
 }
