@@ -1,0 +1,19 @@
+{
+  "trainsPerPlayer": 45,
+  "startingHandSize": 4,
+  "trainCardsPerColor": 12,
+  "locomotiveCardCount": 14,
+  "marketSize": 5,
+  "marketLocomotiveReshuffleThreshold": 3,
+  "startingTicketsDealt": 3,
+  "startingTicketsKeepMin": 2,
+  "longestRouteBonus": 10,
+  "routeScoring": {
+    "1": 1,
+    "2": 2,
+    "3": 4,
+    "4": 7,
+    "5": 10,
+    "6": 15
+  }
+}

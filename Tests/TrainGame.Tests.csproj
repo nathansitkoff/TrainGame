@@ -21,4 +21,9 @@
       <ExcludeAssets>analyzers</ExcludeAssets>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="../Data/game_config.json" Link="Data/game_config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

@@ -28,6 +28,16 @@ Tests/
 
 `Tests/**` is excluded from `TrainGame.csproj` via `<Compile Remove="Tests/**" />` so the game project doesn't try to compile test code.
 
+## Assets
+
+- `Resources/Board/us_map.jpg` — official Days of Wonder Ticket to Ride US board art (1024×683). Used here for personal/learning purposes only. **Must be replaced with original artwork before any public release.**
+
+## MVC boundaries
+
+- **Model** (`Scripts/Model/`) — pure C# data (`GameState`, `GameConfig`, enums). No Godot refs.
+- **Controller** (`Scripts/Logic/`) — `GameEngine` owns the model, validates actions, raises `StateChanged`. Pure C#, unit-testable.
+- **View** (`Scripts/UI/`) — Godot nodes. Reads from `engine.State`, submits actions via engine methods, redraws on `StateChanged`. Never mutates the model directly.
+
 ## Commands
 
 - Run the game headed: `/Applications/Godot_mono.app/Contents/MacOS/Godot --path .`
