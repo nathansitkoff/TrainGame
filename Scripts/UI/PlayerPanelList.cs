@@ -65,7 +65,8 @@ public partial class PlayerPanelList : PanelContainer
             row.Name.Text = $"Player {player.Id + 1}  ({player.Color})";
             row.Stats.Text =
                 $"Score: {player.Score}   Trains: {player.TrainsRemaining}\n" +
-                $"Cards: {player.TotalHandCards}   Tickets: {player.Tickets.Count}";
+                $"Cards: {player.TotalHandCards}   Tickets: {player.Tickets.Count}\n" +
+                FormatHand(player);
             row.Swatch.Color = PlayerColorToGodot(player.Color);
 
             bool isCurrent =
@@ -123,6 +124,26 @@ public partial class PlayerPanelList : PanelContainer
             Stats = stats,
             Swatch = swatch,
         };
+    }
+
+    private static string FormatHand(PlayerState p)
+    {
+        if (p.TotalHandCards == 0) return "Hand: (empty)";
+        var parts = new System.Collections.Generic.List<string>();
+        foreach (var color in new[]
+        {
+            TrainColor.Pink, TrainColor.White, TrainColor.Blue, TrainColor.Yellow,
+            TrainColor.Orange, TrainColor.Black, TrainColor.Red, TrainColor.Green,
+            TrainColor.Locomotive,
+        })
+        {
+            if (p.Hand.TryGetValue(color, out int n) && n > 0)
+            {
+                var label = color == TrainColor.Locomotive ? "L" : color.ToString()[..1];
+                parts.Add($"{label}:{n}");
+            }
+        }
+        return "Hand: " + string.Join(" ", parts);
     }
 
     private static Color PlayerColorToGodot(PlayerColor c) => c switch

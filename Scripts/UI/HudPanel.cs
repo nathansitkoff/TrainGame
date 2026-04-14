@@ -5,63 +5,77 @@ using TrainGame.Model;
 namespace TrainGame.UI;
 
 /// <summary>
-/// Phase 3 view: sidebar showing draw pile count, discard pile count,
-/// the 5 face-up market slots, and destination ticket deck count.
-/// Subscribes to <see cref="GameEngine.StateChanged"/> to refresh.
+/// Left sidebar: draw pile + 5 face-up market slots + ticket deck count.
+/// The deck and market slots are clickable buttons that submit draw
+/// actions to <see cref="GameEngine"/>; buttons enable/disable based on
+/// whether the action is legal for the current player and pick count.
 /// </summary>
 public partial class HudPanel : PanelContainer
 {
+    private const int MarketSize = 5;
+
     private GameEngine? _engine;
-    private Label _drawPileLabel = null!;
-    private Label _discardPileLabel = null!;
+    private Label _turnLabel = null!;
+    private Label _picksLabel = null!;
+    private Button _drawDeckButton = null!;
+    private Label _discardLabel = null!;
     private Label _ticketDeckLabel = null!;
-    private readonly ColorRect[] _marketRects = new ColorRect[5];
-    private readonly Label[] _marketLabels = new Label[5];
+    private readonly Button[] _marketButtons = new Button[MarketSize];
 
     public override void _Ready()
     {
         var root = new VBoxContainer();
-        root.AddThemeConstantOverride("separation", 12);
+        root.AddThemeConstantOverride("separation", 10);
         AddChild(root);
 
         var title = new Label { Text = "Market / Decks" };
         title.AddThemeFontSizeOverride("font_size", 20);
         root.AddChild(title);
 
-        _drawPileLabel = new Label();
-        _discardPileLabel = new Label();
-        _ticketDeckLabel = new Label();
-        root.AddChild(_drawPileLabel);
-        root.AddChild(_discardPileLabel);
-        root.AddChild(_ticketDeckLabel);
+        _turnLabel = new Label();
+        _turnLabel.AddThemeFontSizeOverride("font_size", 14);
+        root.AddChild(_turnLabel);
 
-        var marketHeader = new Label { Text = "Face-up cards" };
-        marketHeader.AddThemeFontSizeOverride("font_size", 16);
+        _picksLabel = new Label();
+        _picksLabel.AddThemeFontSizeOverride("font_size", 14);
+        root.AddChild(_picksLabel);
+
+        _drawDeckButton = new Button
+        {
+            Text = "Draw from deck",
+            CustomMinimumSize = new Vector2(0, 36),
+        };
+        _drawDeckButton.Pressed += OnDrawDeckPressed;
+        root.AddChild(_drawDeckButton);
+
+        _discardLabel = new Label();
+        _discardLabel.AddThemeFontSizeOverride("font_size", 12);
+        root.AddChild(_discardLabel);
+
+        var marketHeader = new Label { Text = "Face-up cards (click to take)" };
+        marketHeader.AddThemeFontSizeOverride("font_size", 14);
         root.AddChild(marketHeader);
 
         var hbox = new HBoxContainer();
-        hbox.AddThemeConstantOverride("separation", 8);
+        hbox.AddThemeConstantOverride("separation", 6);
         root.AddChild(hbox);
 
-        for (int i = 0; i < _marketRects.Length; i++)
+        for (int i = 0; i < MarketSize; i++)
         {
-            var cell = new VBoxContainer();
-            cell.AddThemeConstantOverride("separation", 2);
-            hbox.AddChild(cell);
-
-            var rect = new ColorRect
+            int slot = i;
+            var btn = new Button
             {
-                CustomMinimumSize = new Vector2(48, 64),
-                Color = new Color(0.15f, 0.15f, 0.15f),
+                CustomMinimumSize = new Vector2(54, 72),
+                Text = "-",
             };
-            cell.AddChild(rect);
-            _marketRects[i] = rect;
-
-            var label = new Label { Text = "-" };
-            label.AddThemeFontSizeOverride("font_size", 10);
-            cell.AddChild(label);
-            _marketLabels[i] = label;
+            btn.Pressed += () => OnMarketSlotPressed(slot);
+            hbox.AddChild(btn);
+            _marketButtons[i] = btn;
         }
+
+        _ticketDeckLabel = new Label();
+        _ticketDeckLabel.AddThemeFontSizeOverride("font_size", 12);
+        root.AddChild(_ticketDeckLabel);
     }
 
     public void Attach(GameEngine engine)
@@ -71,35 +85,118 @@ public partial class HudPanel : PanelContainer
         Refresh();
     }
 
+    private void OnDrawDeckPressed()
+    {
+        if (_engine is null) return;
+        _engine.DrawFromDeck();
+    }
+
+    private void OnMarketSlotPressed(int slot)
+    {
+        if (_engine is null) return;
+        _engine.TakeFromMarket(slot);
+    }
+
     private void Refresh()
     {
         if (_engine is null) return;
         var state = _engine.State;
+
         if (!state.Started || state.TrainCardDeck is null || state.Market is null || state.DestinationTicketDeck is null)
         {
-            _drawPileLabel.Text = "Draw pile: -";
-            _discardPileLabel.Text = "Discard pile: -";
+            _turnLabel.Text = "Turn: -";
+            _picksLabel.Text = "Picks remaining: -";
+            _drawDeckButton.Text = "Draw from deck";
+            _drawDeckButton.Disabled = true;
+            _discardLabel.Text = "Discard pile: -";
             _ticketDeckLabel.Text = "Ticket deck: -";
+            foreach (var btn in _marketButtons)
+            {
+                btn.Text = "-";
+                btn.Disabled = true;
+                ApplySlotStyle(btn, bg: new Color(0.15f, 0.15f, 0.15f));
+            }
             return;
         }
 
-        _drawPileLabel.Text = $"Draw pile:    {state.TrainCardDeck.DrawPileCount}";
-        _discardPileLabel.Text = $"Discard pile: {state.TrainCardDeck.DiscardPileCount}";
+        var current = state.Players[state.CurrentPlayerIndex];
+        _turnLabel.Text = state.Phase switch
+        {
+            GamePhase.PlayerTurns => $"Turn: Player {current.Id + 1} ({current.Color})",
+            GamePhase.ChoosingStartingTickets => "Choosing starting tickets",
+            _ => $"Phase: {state.Phase}",
+        };
+        _picksLabel.Text = state.Phase == GamePhase.PlayerTurns
+            ? $"Picks remaining: {state.CurrentTurnPicksRemaining}"
+            : "Picks remaining: -";
+
+        bool drawingAllowed = state.Phase == GamePhase.PlayerTurns
+            && state.CurrentTurnPicksRemaining > 0;
+
+        _drawDeckButton.Text = $"Draw from deck ({state.TrainCardDeck.DrawPileCount})";
+        _drawDeckButton.Disabled = !drawingAllowed || state.TrainCardDeck.TotalRemaining == 0;
+
+        _discardLabel.Text = $"Discard pile: {state.TrainCardDeck.DiscardPileCount}";
         _ticketDeckLabel.Text = $"Ticket deck:  {state.DestinationTicketDeck.RemainingCount}";
 
-        for (int i = 0; i < _marketRects.Length; i++)
+        for (int i = 0; i < MarketSize; i++)
         {
+            var btn = _marketButtons[i];
             var slot = state.Market.Slots[i];
             if (slot is TrainColor c)
             {
-                _marketRects[i].Color = GameColors.ForTrain(c);
-                _marketLabels[i].Text = GameColors.TrainLabel(c);
+                btn.Text = GameColors.TrainLabel(c);
+                ApplySlotStyle(btn, bg: GameColors.ForTrain(c));
+                bool locoBlocked = c == TrainColor.Locomotive && state.CurrentTurnPicksRemaining < 2;
+                btn.Disabled = !drawingAllowed || locoBlocked;
             }
             else
             {
-                _marketRects[i].Color = new Color(0.15f, 0.15f, 0.15f);
-                _marketLabels[i].Text = "-";
+                btn.Text = "-";
+                ApplySlotStyle(btn, bg: new Color(0.15f, 0.15f, 0.15f));
+                btn.Disabled = true;
             }
         }
+    }
+
+    private static void ApplySlotStyle(Button btn, Color bg)
+    {
+        var style = new StyleBoxFlat
+        {
+            BgColor = bg,
+            BorderColor = new Color(0.1f, 0.1f, 0.1f),
+            BorderWidthLeft = 2,
+            BorderWidthRight = 2,
+            BorderWidthTop = 2,
+            BorderWidthBottom = 2,
+            CornerRadiusTopLeft = 4,
+            CornerRadiusTopRight = 4,
+            CornerRadiusBottomLeft = 4,
+            CornerRadiusBottomRight = 4,
+        };
+        btn.AddThemeStyleboxOverride("normal", style);
+        btn.AddThemeStyleboxOverride("hover", style);
+        btn.AddThemeStyleboxOverride("pressed", style);
+        btn.AddThemeStyleboxOverride("disabled",
+            new StyleBoxFlat
+            {
+                BgColor = new Color(bg.R * 0.4f, bg.G * 0.4f, bg.B * 0.4f),
+                BorderColor = new Color(0.1f, 0.1f, 0.1f),
+                BorderWidthLeft = 2,
+                BorderWidthRight = 2,
+                BorderWidthTop = 2,
+                BorderWidthBottom = 2,
+                CornerRadiusTopLeft = 4,
+                CornerRadiusTopRight = 4,
+                CornerRadiusBottomLeft = 4,
+                CornerRadiusBottomRight = 4,
+            });
+
+        // Use contrasting text color for dark slot backgrounds
+        float luminance = 0.299f * bg.R + 0.587f * bg.G + 0.114f * bg.B;
+        btn.AddThemeColorOverride("font_color",
+            luminance < 0.5f ? Colors.White : Colors.Black);
+        btn.AddThemeColorOverride("font_disabled_color",
+            luminance < 0.5f ? new Color(0.8f, 0.8f, 0.8f) : new Color(0.2f, 0.2f, 0.2f));
     }
 }
