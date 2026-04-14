@@ -12,6 +12,10 @@ public partial class Main : Control
         var configJson = LoadConfigJson();
         var config = GameConfigLoader.FromJson(configJson);
         _engine = new GameEngine(config, new SeededRandom(1));
+
+        var hud = GetNode<HudPanel>("HudPanel");
+        hud.Attach(_engine);
+
         _engine.StartNewGame();
         GD.Print($"TrainGame ready. Game started: {_engine.State.Started}");
     }

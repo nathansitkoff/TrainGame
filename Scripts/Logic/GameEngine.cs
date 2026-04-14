@@ -25,7 +25,17 @@ public sealed class GameEngine
 
     public void StartNewGame()
     {
-        State = new GameState { Started = true };
+        var trainDeck = TrainCardDeck.BuildShuffled(Config, _random);
+        var market = new Market(trainDeck, Config);
+        var ticketDeck = new DestinationTicketDeck(_random);
+
+        State = new GameState
+        {
+            Started = true,
+            TrainCardDeck = trainDeck,
+            Market = market,
+            DestinationTicketDeck = ticketDeck,
+        };
         StateChanged?.Invoke();
     }
 }

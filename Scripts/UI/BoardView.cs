@@ -69,7 +69,7 @@ public partial class BoardView : Control
                 if (route.Id < partnerId) { a += perp; b += perp; }
                 else { a -= perp; b -= perp; }
             }
-            DrawLine(a, b, ToGodotColor(route.Color), width: 2f, antialiased: true);
+            DrawLine(a, b, GameColors.ForRoute(route.Color), width: 2f, antialiased: true);
         }
 
         // City dots — white halo + colored center for visibility on any background.
@@ -83,18 +83,4 @@ public partial class BoardView : Control
 
     private Vector2 ToScreen(NormPos p) =>
         _boardOrigin + new Vector2(p.X * _boardSize.X, p.Y * _boardSize.Y);
-
-    private static Color ToGodotColor(RouteColor c) => c switch
-    {
-        RouteColor.Gray   => new Color(0.5f, 0.5f, 0.5f),
-        RouteColor.Pink   => new Color(1.00f, 0.41f, 0.71f),
-        RouteColor.White  => new Color(0.95f, 0.95f, 0.95f),
-        RouteColor.Blue   => new Color(0.20f, 0.45f, 0.90f),
-        RouteColor.Yellow => new Color(0.98f, 0.85f, 0.10f),
-        RouteColor.Orange => new Color(1.00f, 0.55f, 0.10f),
-        RouteColor.Black  => new Color(0.05f, 0.05f, 0.05f),
-        RouteColor.Red    => new Color(0.90f, 0.15f, 0.15f),
-        RouteColor.Green  => new Color(0.15f, 0.65f, 0.25f),
-        _                 => Colors.Magenta,
-    };
 }
